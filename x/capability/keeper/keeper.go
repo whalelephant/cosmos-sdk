@@ -288,6 +288,9 @@ func (sk ScopedKeeper) AuthenticateCapability(ctx sdk.Context, cap *types.Capabi
 // index. If the owner already exists, it will return an error. Otherwise, it will
 // also set a forward and reverse index for the capability and capability name.
 func (sk ScopedKeeper) ClaimCapability(ctx sdk.Context, cap *types.Capability, name string) error {
+
+	logger(ctx).Info("in capability keeper")
+
 	if cap == nil {
 		return sdkerrors.Wrap(types.ErrNilCapability, "cannot claim nil capability")
 	}
@@ -299,17 +302,25 @@ func (sk ScopedKeeper) ClaimCapability(ctx sdk.Context, cap *types.Capability, n
 		return err
 	}
 
+	logger(ctx).Info("in capability keeper - added owner")
+
 	memStore := ctx.KVStore(sk.memKey)
+
+	logger(ctx).Info("in capability keeper - memstore")
 
 	// Set the forward mapping between the module and capability tuple and the
 	// capability name in the memKVStore
 	memStore.Set(types.FwdCapabilityKey(sk.module, cap), []byte(name))
+
+	logger(ctx).Info("in capability keeper - set memstore")
 
 	// Set the reverse mapping between the module and capability name and the
 	// index in the in-memory store. Since marshalling and unmarshalling into a store
 	// will change memory address of capability, we simply store index as value here
 	// and retrieve the in-memory pointer to the capability from our map
 	memStore.Set(types.RevCapabilityKey(sk.module, name), sdk.Uint64ToBigEndian(cap.GetIndex()))
+
+	logger(ctx).Info("in capability keeper - set memstore type cap")
 
 	logger(ctx).Info("claimed capability", "module", sk.module, "name", name, "capability", cap.GetIndex())
 
@@ -454,10 +465,12 @@ func (sk ScopedKeeper) LookupModules(ctx sdk.Context, name string) ([]string, *t
 }
 
 func (sk ScopedKeeper) addOwner(ctx sdk.Context, cap *types.Capability, name string) error {
+	logger(ctx).Info("add owners")
 	prefixStore := prefix.NewStore(ctx.KVStore(sk.storeKey), types.KeyPrefixIndexCapability)
 	indexKey := types.IndexToKey(cap.GetIndex())
 
 	capOwners := sk.getOwners(ctx, cap)
+	logger(ctx).Info("got owners", capOwners)
 
 	if err := capOwners.Set(types.NewOwner(sk.module, name)); err != nil {
 		return err
